@@ -1,6 +1,7 @@
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Tuple, List
 
 from django.contrib.auth import get_user_model, password_validation
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import IntegrityError, transaction
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers, status
@@ -37,23 +38,32 @@ class RegisterSerializer(serializers.Serializer):
 
     def validate_username(self, value: str) -> str:
         if User.objects.filter(username=value).exists():
+            # Field-level validation for uniqueness
             raise serializers.ValidationError(_("Username already in use."))
         return value
 
     def validate_email(self, value: str) -> str:
         # Normalize email case-insensitively for uniqueness
         if User.objects.filter(email__iexact=value).exists():
+            # Field-level validation for uniqueness
             raise serializers.ValidationError(_("Email already in use."))
         return value
 
     def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
         # Run Django's password validators in context of a user (with provided username/email)
         temp_user = User(username=attrs.get("username"), email=attrs.get("email"))
+        password_errors: List[str] = []
         try:
             password_validation.validate_password(password=attrs.get("password"), user=temp_user)
+        except DjangoValidationError as exc:
+            # Collect all password validator messages
+            for msg in exc.messages:
+                password_errors.append(str(msg))
         except Exception as exc:
-            # Convert any validator exceptions to DRF-friendly error
-            raise serializers.ValidationError({"password": [str(x) for x in (exc,)]}) from exc
+            password_errors.append(str(exc))
+        if password_errors:
+            # Attach under 'password' key for field-level display on frontend
+            raise serializers.ValidationError({"password": password_errors})
         return attrs
 
     @transaction.atomic
@@ -70,8 +80,10 @@ class RegisterSerializer(serializers.Serializer):
                 setattr(user, "role", role or getattr(user, "role", "learner"))
                 user.save(update_fields=["role"])
         except IntegrityError as e:
-            # Additional safety net against race conditions
-            raise serializers.ValidationError(_("Username or Email already exists.")) from e
+            # Additional safety net against race conditions; provide field-level hints
+            raise serializers.ValidationError(
+                {"username": [_("Username may already exist.")], "email": [_("Email may already exist.")]}
+            ) from e
         return user, auto_login
 
 
@@ -122,7 +134,14 @@ def register(request: Request) -> Response:
         pass
 
     serializer = RegisterSerializer(data=request.data)
-    serializer.is_valid(raise_exception=True)
+    if not serializer.is_valid():
+        # Emit structured errors to logs to assist diagnostics (avoid dumping sensitive data)
+        try:
+            print("[auth.register][validation_error]", {"path": request.get_full_path(), "errors": serializer.errors})
+        except Exception:
+            pass
+        return Response({"errors": serializer.errors, "detail": "Invalid registration data."}, status=status.HTTP_400_BAD_REQUEST)
+
     user, auto_login = serializer.save()
 
     # Build public user payload aligned with existing UserSerializer fields.
