@@ -11,6 +11,7 @@ from .viewsets import (
     ReportingViewSet, sso_login_start, sso_callback
 )
 from .auth import UsernameOrEmailTokenObtainPairView
+from .registration import register  # new
 
 router = DefaultRouter()
 router.register(r"courses", CourseViewSet, basename="courses")
@@ -29,6 +30,8 @@ router.register(r"reporting", ReportingViewSet, basename="reporting")
 # PUBLIC_INTERFACE
 urlpatterns = [
     path("health/", health, name="Health"),
+    # Auth - Registration
+    path("auth/register/", register, name="auth_register"),
     # Auth - JWT (custom view supports username or email)
     path("auth/token/", UsernameOrEmailTokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("auth/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
