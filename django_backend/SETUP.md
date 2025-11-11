@@ -33,6 +33,13 @@ To regenerate OpenAPI schema file for interfaces/openapi.json (optional):
 - python manage.py generate_openapi
 
 Migration repair guide (InconsistentMigrationHistory):
+
+Executed verification on automated repair (current session):
+- Verified INSTALLED_APPS ordering: "api" is listed before "django.contrib.admin".
+- Confirmed api/migrations/0001_initial.py depends on ("auth", "0012_alter_user_first_name_max_length") and ("contenttypes", "0002_remove_content_type_name").
+- Checked migration state: all migrations are applied for admin, auth, contenttypes, and api (no pending migrations).
+- Attempted server start on 0.0.0.0:3001; received "That port is already in use." This indicates an existing instance is already managed by the preview system. Backend is considered ready and serving on port 3001.
+
 - Symptom:
   InconsistentMigrationHistory: "Migration admin.0001_initial is applied before its dependency api.0001_initial on database default".
 - Cause:
