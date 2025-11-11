@@ -105,6 +105,25 @@ class RegistrationAndLoginTests(APITestCase):
         self.assertIn("user", res.data)
         self.assertNotIn("tokens", res.data)
 
+    def test_root_aliases_without_slash(self):
+        # root-level /auth aliases should also accept without trailing slash
+        payload = {
+            "username": "rootuser",
+            "email": "root@example.com",
+            "password": "S3curePass!123",
+            "auto_login": False
+        }
+        res = self.client.post("/auth/register", payload, format="json")
+        self.assertEqual(res.status_code, 201, res.data if hasattr(res, "data") else res.content)
+
+        # Login via root alias without trailing slash
+        res_login = self.client.post("/auth/token", {
+            "username": "rootuser",
+            "password": "S3curePass!123"
+        }, format="json")
+        self.assertEqual(res_login.status_code, 200, res_login.data if hasattr(res_login, "data") else res_login.content)
+        self.assertIn("access", res_login.data)
+
     def test_login_with_identifier_email_and_username(self):
         # create a user
         create = self.client.post(reverse("auth_register"), {
@@ -115,7 +134,7 @@ class RegistrationAndLoginTests(APITestCase):
         }, format="json")
         self.assertEqual(create.status_code, 201, create.data if hasattr(create, "data") else create.content)
 
-        # login via username
+        # login via username (trailing slash)
         res1 = self.client.post("/api/auth/login/", {
             "username": "loginuser",
             "password": "S3curePass!123"
@@ -123,7 +142,7 @@ class RegistrationAndLoginTests(APITestCase):
         self.assertEqual(res1.status_code, 200, res1.data if hasattr(res1, "data") else res1.content)
         self.assertIn("access", res1.data)
 
-        # login via identifier (email)
+        # login via identifier (email) without trailing slash
         res2 = self.client.post("/api/auth/login", {
             "identifier": "login@example.com",
             "password": "S3curePass!123"

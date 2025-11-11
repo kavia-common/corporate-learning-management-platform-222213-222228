@@ -115,6 +115,12 @@ def register(request: Request) -> Response:
       }
     - 400 Bad Request: validation errors
     """
+    # Log path for diagnostic purposes (helps confirm alias and trailing slash behavior)
+    try:
+        print(f"[auth.register] POST {request.get_full_path()}")
+    except Exception:
+        pass
+
     serializer = RegisterSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     user, auto_login = serializer.save()

@@ -62,6 +62,14 @@ class UsernameOrEmailTokenObtainPairView(TokenObtainPairView):
         Returns:
         - 200 OK with { "refresh": "...", "access": "..." } or 401 on failure.
         """
+        # Lightweight log to help diagnose URL/path and APPEND_SLASH effects
+        try:
+            path_info = request.get_full_path()
+            # use print to stdout; in containerized env it goes to logs
+            print(f"[auth.token] POST {path_info}")
+        except Exception:
+            pass
+
         response = super().post(request, *args, **kwargs)
         # SimpleJWT returns 200 on success and 401 on failure by default
         if response.status_code not in (status.HTTP_200_OK, status.HTTP_401_UNAUTHORIZED):
