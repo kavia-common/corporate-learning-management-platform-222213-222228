@@ -17,6 +17,8 @@
 
 5. Run server
    - python manage.py runserver 0.0.0.0:3001
+   - Or use the provided Procfile.dev with PORT env var: PORT=3001 foreman start -f Procfile.dev
+   - Note: runserver ignores PORT automatically; always bind explicitly to 0.0.0.0:3001 for container use.
 
 Notes:
 - AUTH_USER_MODEL is set to api.User (custom user model).
