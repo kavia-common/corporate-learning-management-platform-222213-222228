@@ -19,22 +19,26 @@ class UsernameOrEmailTokenObtainPairSerializer(TokenObtainPairSerializer):
     """
     Custom serializer that accepts either:
       - identifier + password (identifier can be username or email), or
-      - username + password (backward compatible with SimpleJWT default)
-    It resolves the identifier to a username before delegating to the base logic.
+      - username + password (SimpleJWT default).
+    Returns consistent field-level errors for missing inputs and a normalized 'detail' for auth failures.
     """
 
+    # Explicitly declare username to ensure DRF generates error messages when missing
+    username = serializers.CharField(required=False, allow_blank=False)
     identifier = serializers.CharField(required=False, allow_blank=False)
-    password = serializers.CharField(write_only=True, trim_whitespace=False)
+    password = serializers.CharField(write_only=True, trim_whitespace=False, required=True, allow_blank=False)
 
     def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
         identifier = attrs.get("identifier")
-        username = attrs.get(self.username_field)
+        username = attrs.get(self.username_field) or attrs.get("username")
         password = attrs.get("password")
 
         # Shape basic field errors early
         field_errors = {}
         if not (identifier or username):
-            field_errors[self.username_field] = [_("Username or identifier is required.")]
+            # Return both keys helpful for frontend forms
+            field_errors[self.username_field] = [_("Username is required if identifier is not provided.")]
+            field_errors["identifier"] = [_("Identifier is required if username is not provided.")]
         if not password:
             field_errors["password"] = [_("Password is required.")]
         if field_errors:
@@ -49,18 +53,25 @@ class UsernameOrEmailTokenObtainPairSerializer(TokenObtainPairSerializer):
                 # Use consistent message for invalid identifier to avoid leaking existence
                 raise serializers.ValidationError({"detail": _("Invalid credentials.")})
             attrs[self.username_field] = user.username
+        elif username:
+            # Ensure serializer attribute for SimpleJWT base
+            attrs[self.username_field] = username
 
         try:
             # Delegate to base class for password checking and token generation
             return super().validate(attrs)
         except serializers.ValidationError as exc:
             # Normalize error detail to a consistent structure
-            detail = exc.detail if hasattr(exc, "detail") else exc.args
-            # SimpleJWT may return {"detail": "..."} or {"no_active_account": "..."}; normalize both
+            detail = getattr(exc, "detail", None) or exc.args
             if isinstance(detail, dict):
+                # SimpleJWT may return {"detail": "..."} or {"no_active_account": "..."}; normalize both
                 if "no_active_account" in detail:
                     raise serializers.ValidationError({"detail": _("Invalid credentials.")})
-                raise
+                if "detail" in detail:
+                    # Keep detail but normalize status at view
+                    raise
+                # Any other dict -> generic invalid
+                raise serializers.ValidationError({"detail": _("Invalid credentials.")})
             raise serializers.ValidationError({"detail": _("Invalid credentials.")})
 
 
@@ -74,12 +85,12 @@ class UsernameOrEmailTokenObtainPairView(TokenObtainPairView):
         """
         Issue an access/refresh token pair.
 
-        Request body:
+        Request body (JSON, content-type application/json):
         - identifier: string (username or email) OR username: string
         - password: string
 
         Returns:
-        - 200 OK with { "refresh": "...", "access": "..." } or 401 on failure.
+        - 200 OK with { "refresh": "...", "access": "..." } or 401 with {"detail": "..."} on failure.
         """
         # Lightweight log to help diagnose URL/path and APPEND_SLASH effects
         try:
@@ -88,7 +99,7 @@ class UsernameOrEmailTokenObtainPairView(TokenObtainPairView):
         except Exception:
             pass
 
-        # Ensure we always parse JSON when provided
+        # Delegate to SimpleJWT view which uses the serializer above
         response = super().post(request, *args, **kwargs)
 
         # Normalize non-200 responses from SimpleJWT to keep JSON body with detail

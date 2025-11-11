@@ -37,6 +37,9 @@ class LoginSmokeTests(APITestCase):
     def test_login_success_username_with_trailing_slash(self):
         self._expect_login_ok("/api/auth/token/", {"username": self.username, "password": self.password})
 
+    def test_login_success_identifier_email_with_trailing_slash(self):
+        self._expect_login_ok("/api/auth/token/", {"identifier": self.email, "password": self.password})
+
     def test_login_success_identifier_email_without_trailing_slash(self):
         self._expect_login_ok("/api/auth/token", {"identifier": self.email, "password": self.password})
 
@@ -47,3 +50,12 @@ class LoginSmokeTests(APITestCase):
     def test_login_failure_wrong_password(self):
         self._expect_login_fail("/api/auth/token/", {"username": self.username, "password": "wrong"})
         self._expect_login_fail("/auth/token", {"identifier": self.email, "password": "wrong"})
+
+    def test_login_missing_fields_return_field_errors(self):
+        res = self.client.post("/api/auth/token/", data=json.dumps({}), content_type="application/json")
+        self.assertEqual(res.status_code, 400)
+        data = res.json()
+        # Expect field-level messages for username/identifier and password
+        self.assertIn("username", data)
+        self.assertIn("identifier", data)
+        self.assertIn("password", data)

@@ -44,3 +44,11 @@ class AuthEndpointsDiagnosticsTests(APITestCase):
         bad2 = self.client.post("/api/auth/token", data=json.dumps({"identifier": "no@no.com", "password": "nope"}), content_type="application/json")
         self.assertEqual(bad2.status_code, 401)
         self.assertIn("detail", bad2.json())
+
+        # Missing fields should return 400 with field-level errors
+        missing = self.client.post("/api/auth/token/", data=json.dumps({}), content_type="application/json")
+        self.assertEqual(missing.status_code, 400)
+        miss_data = missing.json()
+        self.assertIn("username", miss_data)
+        self.assertIn("identifier", miss_data)
+        self.assertIn("password", miss_data)
