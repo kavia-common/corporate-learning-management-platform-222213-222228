@@ -1,3 +1,21 @@
 from django.contrib import admin
+from . import models
 
-# Register your models here.
+admin.site.register(models.User)
+admin.site.register(models.Role)
+admin.site.register(models.Permission)
+admin.site.register(models.Course)
+admin.site.register(models.Module)
+admin.site.register(models.Lesson)
+admin.site.register(models.Enrollment)
+admin.site.register(models.LessonProgress)
+admin.site.register(models.Quiz)
+admin.site.register(models.Question)
+admin.site.register(models.Choice)
+admin.site.register(models.QuizAttempt)
+admin.site.register(models.Answer)
+admin.site.register(models.Certificate)
+admin.site.register(models.LearningPath)
+admin.site.register(models.LearningPathItem)
+admin.site.register(models.Notification)
+admin.site.register(models.AuditLog)
