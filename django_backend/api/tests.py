@@ -66,3 +66,67 @@ class AuthAndCourseSmokeTests(APITestCase):
         # check progress is 100
         enr = Enrollment.objects.get(user__username="learner", course_id=c["id"])
         self.assertEqual(float(enr.progress_percent), 100.0)
+
+
+class RegistrationAndLoginTests(APITestCase):
+    def test_register_with_trailing_slash_and_auto_login(self):
+        payload = {
+            "username": "newuser1",
+            "email": "new1@example.com",
+            "password": "S3curePass!123",
+            "first_name": "New",
+            "last_name": "User",
+            "auto_login": True
+        }
+        # Use named URL for trailing slash
+        url = reverse("auth_register")
+        res = self.client.post(url, payload, format="json")
+        self.assertEqual(res.status_code, 201, res.data if hasattr(res, "data") else res.content)
+        self.assertIn("user", res.data)
+        self.assertIn("tokens", res.data)
+        self.assertIn("access", res.data["tokens"])
+        # Verify we can call a protected endpoint with received token
+        token = res.data["tokens"]["access"]
+        client = APIClient()
+        client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+        protected = client.get("/api/courses/")
+        self.assertIn(protected.status_code, (200, 403))  # 200 if allowed to list, 403 otherwise but not 401
+
+    def test_register_without_trailing_slash(self):
+        # Explicitly hit /api/auth/register without slash
+        payload = {
+            "username": "newuser2",
+            "email": "new2@example.com",
+            "password": "S3curePass!123",
+            "auto_login": False
+        }
+        res = self.client.post("/api/auth/register", payload, format="json")
+        self.assertEqual(res.status_code, 201, res.data if hasattr(res, "data") else res.content)
+        self.assertIn("user", res.data)
+        self.assertNotIn("tokens", res.data)
+
+    def test_login_with_identifier_email_and_username(self):
+        # create a user
+        create = self.client.post(reverse("auth_register"), {
+            "username": "loginuser",
+            "email": "login@example.com",
+            "password": "S3curePass!123",
+            "auto_login": False
+        }, format="json")
+        self.assertEqual(create.status_code, 201, create.data if hasattr(create, "data") else create.content)
+
+        # login via username
+        res1 = self.client.post("/api/auth/login/", {
+            "username": "loginuser",
+            "password": "S3curePass!123"
+        }, format="json")
+        self.assertEqual(res1.status_code, 200, res1.data if hasattr(res1, "data") else res1.content)
+        self.assertIn("access", res1.data)
+
+        # login via identifier (email)
+        res2 = self.client.post("/api/auth/login", {
+            "identifier": "login@example.com",
+            "password": "S3curePass!123"
+        }, format="json")
+        self.assertEqual(res2.status_code, 200, res2.data if hasattr(res2, "data") else res2.content)
+        self.assertIn("refresh", res2.data)
