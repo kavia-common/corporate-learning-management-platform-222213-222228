@@ -10,6 +10,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
+from django.utils.translation import gettext_lazy as _
 
 User = get_user_model()
 
@@ -23,10 +24,21 @@ class UsernameOrEmailTokenObtainPairSerializer(TokenObtainPairSerializer):
     """
 
     identifier = serializers.CharField(required=False, allow_blank=False)
+    password = serializers.CharField(write_only=True, trim_whitespace=False)
 
     def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
         identifier = attrs.get("identifier")
         username = attrs.get(self.username_field)
+        password = attrs.get("password")
+
+        # Shape basic field errors early
+        field_errors = {}
+        if not (identifier or username):
+            field_errors[self.username_field] = [_("Username or identifier is required.")]
+        if not password:
+            field_errors["password"] = [_("Password is required.")]
+        if field_errors:
+            raise serializers.ValidationError(field_errors)
 
         # If identifier provided, resolve to username via username or email match (case-insensitive for email)
         if identifier and not username:
@@ -34,11 +46,22 @@ class UsernameOrEmailTokenObtainPairSerializer(TokenObtainPairSerializer):
                 Q(username=identifier) | Q(email__iexact=identifier)
             ).first()
             if not user:
-                raise serializers.ValidationError("Invalid credentials.")
+                # Use consistent message for invalid identifier to avoid leaking existence
+                raise serializers.ValidationError({"detail": _("Invalid credentials.")})
             attrs[self.username_field] = user.username
 
-        # Delegate to base class for password checking and token generation
-        return super().validate(attrs)
+        try:
+            # Delegate to base class for password checking and token generation
+            return super().validate(attrs)
+        except serializers.ValidationError as exc:
+            # Normalize error detail to a consistent structure
+            detail = exc.detail if hasattr(exc, "detail") else exc.args
+            # SimpleJWT may return {"detail": "..."} or {"no_active_account": "..."}; normalize both
+            if isinstance(detail, dict):
+                if "no_active_account" in detail:
+                    raise serializers.ValidationError({"detail": _("Invalid credentials.")})
+                raise
+            raise serializers.ValidationError({"detail": _("Invalid credentials.")})
 
 
 # PUBLIC_INTERFACE
@@ -65,8 +88,10 @@ class UsernameOrEmailTokenObtainPairView(TokenObtainPairView):
         except Exception:
             pass
 
+        # Ensure we always parse JSON when provided
         response = super().post(request, *args, **kwargs)
-        # SimpleJWT returns 200 on success and 401 on failure by default
+
+        # Normalize non-200 responses from SimpleJWT to keep JSON body with detail
         if response.status_code not in (status.HTTP_200_OK, status.HTTP_401_UNAUTHORIZED):
             response.status_code = status.HTTP_401_UNAUTHORIZED
         return response

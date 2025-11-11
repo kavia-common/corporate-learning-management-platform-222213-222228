@@ -20,13 +20,27 @@ class AuthEndpointsDiagnosticsTests(APITestCase):
         self.assertIn(r.status_code, [201, 400])  # 400 possible if rerun
         # Ensure id or proper error
         if r.status_code == 201:
-            self.assertIn("id", r.json())
+            self.assertIn("user", r.json())
         else:
-            self.assertIn("error", r.json())
+            # normalized error format
+            self.assertIn("errors", r.json())
 
         # Now login via token endpoint using username/password
         login_payload = {"username": "tester", "password": "Test123!pass"}
         t = self.client.post("/api/auth/token/", data=json.dumps(login_payload), content_type="application/json")
-        self.assertIn(t.status_code, [200, 201])  # DRF SimpleJWT returns 200
+        self.assertEqual(t.status_code, 200)  # DRF SimpleJWT returns 200
         self.assertIn("access", t.json())
         self.assertIn("refresh", t.json())
+
+    def test_login_invalid_credentials_returns_json_detail(self):
+        # Try with non-existent user
+        bad = self.client.post("/api/auth/token/", data=json.dumps({"username": "nouser", "password": "nope"}), content_type="application/json")
+        self.assertEqual(bad.status_code, 401)
+        data = bad.json()
+        self.assertIn("detail", data)
+        self.assertTrue("Invalid" in data["detail"] or "No active" in data["detail"])
+
+        # Try via identifier path without trailing slash
+        bad2 = self.client.post("/api/auth/token", data=json.dumps({"identifier": "no@no.com", "password": "nope"}), content_type="application/json")
+        self.assertEqual(bad2.status_code, 401)
+        self.assertIn("detail", bad2.json())
