@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import (
     TokenRefreshView, TokenVerifyView
 )
-from .views import health
+from .views import health, auth_ping
 from .viewsets import (
     CourseViewSet, ModuleViewSet, LessonViewSet, EnrollmentViewSet,
     QuizViewSet, QuestionViewSet, ChoiceViewSet, QuizAttemptViewSet,
@@ -30,6 +30,8 @@ router.register(r"reporting", ReportingViewSet, basename="reporting")
 # PUBLIC_INTERFACE
 urlpatterns = [
     path("health/", health, name="Health"),
+    # Auth - Diagnostics
+    path("auth/ping/", auth_ping, name="auth_ping"),
     # Auth - Registration (support trailing and non-trailing slash to avoid 404s)
     path("auth/register/", register, name="auth_register"),
     path("auth/register", register, name="auth_register_no_slash"),

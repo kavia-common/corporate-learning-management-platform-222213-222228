@@ -22,6 +22,7 @@ from drf_yasg import openapi
 from django.views.decorators.csrf import csrf_exempt
 from api.registration import register  # root-level alias forwards to /api/auth/register
 from api.auth import UsernameOrEmailTokenObtainPairView  # root-level alias forwards to /api/auth/token
+from api.views import auth_ping
 from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
 
 urlpatterns = [
@@ -35,6 +36,7 @@ urlpatterns = [
     path('auth/token/refresh', TokenRefreshView.as_view(), name='root_token_refresh_no_slash'),
     path('auth/token/verify/', TokenVerifyView.as_view(), name='root_token_verify'),
     path('auth/token/verify', TokenVerifyView.as_view(), name='root_token_verify_no_slash'),
+    path('auth/ping/', auth_ping, name='root_auth_ping'),
     # Primary API namespace
     path('api/', include('api.urls')),
 ]
