@@ -22,3 +22,10 @@ Notes:
 - AUTH_USER_MODEL is set to api.User (custom user model).
 - Email defaults to console backend when DJANGO_DEBUG=true.
 - Media files stored at DJANGO_MEDIA_ROOT (default ./media).
+- JWT endpoints: /api/auth/token/, /api/auth/token/refresh/, /api/auth/token/verify/
+- SSO placeholders: /api/auth/sso/start/, /api/auth/sso/callback/
+- WebSocket notifications: connect to /ws/notifications/ (authenticated)
+- API docs: /docs/ (Swagger UI), /redoc/, /swagger.json
+
+To regenerate OpenAPI schema file for interfaces/openapi.json (optional):
+- python manage.py generate_openapi

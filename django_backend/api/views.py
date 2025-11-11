@@ -6,6 +6,10 @@ from rest_framework.response import Response
 def health(request):
     """
     Health check endpoint.
+
+    Summary:
+    - Returns server readiness status.
+
     Returns:
       200 OK with {"message": "Server is up!"}
     """
