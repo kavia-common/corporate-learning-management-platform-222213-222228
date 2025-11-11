@@ -35,8 +35,11 @@ urlpatterns = [
     path("auth/register", register, name="auth_register_no_slash"),
     # Auth - JWT (custom view supports username or email)
     path("auth/token/", UsernameOrEmailTokenObtainPairView.as_view(), name="token_obtain_pair"),
+    path("auth/token", UsernameOrEmailTokenObtainPairView.as_view(), name="token_obtain_pair_no_slash"),
     path("auth/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
+    path("auth/token/refresh", TokenRefreshView.as_view(), name="token_refresh_no_slash"),
     path("auth/token/verify/", TokenVerifyView.as_view(), name="token_verify"),
+    path("auth/token/verify", TokenVerifyView.as_view(), name="token_verify_no_slash"),
     # Backward-compat shims for frontend client convenience (optional)
     path("auth/login", UsernameOrEmailTokenObtainPairView.as_view(), name="token_obtain_pair_noslash"),
     path("auth/login/", UsernameOrEmailTokenObtainPairView.as_view(), name="token_obtain_pair_login"),
