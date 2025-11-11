@@ -37,24 +37,40 @@ Migration repair guide (InconsistentMigrationHistory):
   InconsistentMigrationHistory: "Migration admin.0001_initial is applied before its dependency api.0001_initial on database default".
 - Cause:
   The project uses a custom user model (api.User). If admin was migrated before api’s initial migration in an existing DB, Django detects inconsistent order.
-- Fix options:
-  Option A (recommended for local/dev): fake-apply api initial migration to align history.
-    python manage.py migrate contenttypes
-    python manage.py migrate auth
-    python manage.py migrate api 0001 --fake
-    python manage.py migrate
-  Option B (if you prefer strict ordering or fake is not appropriate):
-    python manage.py migrate admin zero
-    python manage.py migrate
+
+- Verified state and safe repair commands:
+  1) Verify dependencies and ordering:
+     - api/migrations/0001_initial.py depends on auth and contenttypes.
+     - INSTALLED_APPS places "api" before "django.contrib.admin".
+  2) Inspect migration state:
+     - python manage.py showmigrations
+  3) Apply/fix migrations:
+     - python manage.py migrate --noinput
+     - If admin 0001 is applied and api 0001 is not but tables exist:
+       python manage.py migrate api 0001 --fake --noinput
+       python manage.py migrate --noinput
+     - If schema not present and order is wrong:
+       python manage.py migrate admin zero --noinput
+       python manage.py migrate --noinput
+  4) Start server:
+     - python manage.py runserver 0.0.0.0:3001
+
+- Port already in use:
+  If you see "Error: That port is already in use.", a server is likely already running.
+  - Either stop the existing process, or run on an alternate port:
+    python manage.py runserver 0.0.0.0:3002
+
 - Fresh setup tip:
   On a clean database, simply run:
     python manage.py migrate
   makemigrations should report “No changes detected” unless you modified models.
+
 - SQLite reset (last resort for local only):
   rm -f db.sqlite3
   find . -path "*/migrations/*.pyc" -delete
   find . -path "*/migrations/*.py" -not -name "__init__.py" -delete
   python manage.py makemigrations
   python manage.py migrate
+
 - Production caution:
   Do not drop data or fake migrations without verifying schema parity and backups.
