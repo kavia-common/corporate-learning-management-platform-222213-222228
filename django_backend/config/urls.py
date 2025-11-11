@@ -20,9 +20,17 @@ from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 from django.views.decorators.csrf import csrf_exempt
+from api.registration import register  # root-level alias forwards to /api/auth/register
+from api.auth import UsernameOrEmailTokenObtainPairView  # root-level alias forwards to /api/auth/token
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    # Root-level aliases for auth to avoid 404s when frontend omits /api
+    path('auth/register/', register, name='root_auth_register'),
+    path('auth/register', register, name='root_auth_register_no_slash'),
+    path('auth/token/', UsernameOrEmailTokenObtainPairView.as_view(), name='root_token_obtain_pair'),
+    path('auth/token', UsernameOrEmailTokenObtainPairView.as_view(), name='root_token_obtain_pair_no_slash'),
+    # Primary API namespace
     path('api/', include('api.urls')),
 ]
 
