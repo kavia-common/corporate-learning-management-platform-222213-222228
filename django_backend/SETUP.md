@@ -12,8 +12,13 @@
    - python manage.py makemigrations
    - python manage.py migrate
 
-4. Create superuser
-   - python manage.py createsuperuser
+4. Create users
+   - Option A (manual): python manage.py createsuperuser
+   - Option B (seed test users): python manage.py create_test_users
+     Creates:
+       admin / a@a.com (admin role) password: pass
+       inst / i@i.com (instructor) password: pass
+       learner / l@l.com (learner) password: pass
 
 5. Run server
    - python manage.py runserver 0.0.0.0:3001
@@ -24,13 +29,19 @@ Notes:
 - AUTH_USER_MODEL is set to api.User (custom user model).
 - Email defaults to console backend when DJANGO_DEBUG=true.
 - Media files stored at DJANGO_MEDIA_ROOT (default ./media).
-- JWT endpoints: /api/auth/token/, /api/auth/token/refresh/, /api/auth/token/verify/
+- JWT endpoints:
+  - POST /api/auth/token/ accepts:
+      { "identifier": "<username-or-email>", "password": "<password>" }
+    or legacy:
+      { "username": "<username>", "password": "<password>" }
+  - POST /api/auth/token/refresh/
+  - POST /api/auth/token/verify/
 - SSO placeholders: /api/auth/sso/start/, /api/auth/sso/callback/
 - WebSocket notifications: connect to /ws/notifications/ (authenticated)
 - API docs: /docs/ (Swagger UI), /redoc/, /swagger.json
 
 To regenerate OpenAPI schema file for interfaces/openapi.json (optional):
-- python manage.py generate_openapi
+- python manage.py generate_openAPI
 
 Migration repair guide (InconsistentMigrationHistory):
 

@@ -1,7 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import (
-    TokenObtainPairView, TokenRefreshView, TokenVerifyView
+    TokenRefreshView, TokenVerifyView
 )
 from .views import health
 from .viewsets import (
@@ -10,6 +10,7 @@ from .viewsets import (
     CertificateViewSet, LearningPathViewSet, NotificationViewSet,
     ReportingViewSet, sso_login_start, sso_callback
 )
+from .auth import UsernameOrEmailTokenObtainPairView
 
 router = DefaultRouter()
 router.register(r"courses", CourseViewSet, basename="courses")
@@ -28,8 +29,8 @@ router.register(r"reporting", ReportingViewSet, basename="reporting")
 # PUBLIC_INTERFACE
 urlpatterns = [
     path("health/", health, name="Health"),
-    # Auth - JWT
-    path("auth/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
+    # Auth - JWT (custom view supports username or email)
+    path("auth/token/", UsernameOrEmailTokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("auth/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("auth/token/verify/", TokenVerifyView.as_view(), name="token_verify"),
     # SSO placeholders
