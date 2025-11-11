@@ -40,6 +40,26 @@ Notes:
 - WebSocket notifications: connect to /ws/notifications/ (authenticated)
 - API docs: /docs/ (Swagger UI), /redoc/, /swagger.json
 
+## Frontend integration notes (auth)
+
+- API is mounted under `/api` from the project root (`config/urls.py` includes `path('api/', include('api.urls'))`).
+- Auth endpoints available with and without trailing slash:
+  - POST `/api/auth/register` and `/api/auth/register/` (AllowAny)
+  - POST `/api/auth/login` and `/api/auth/login/` alias to JWT obtain
+  - POST `/api/auth/token/` (preferred), `/api/auth/token/refresh/`, `/api/auth/token/verify/`
+
+Frontend configuration:
+- Set `REACT_APP_API_BASE_URL` to include the `/api` suffix, e.g. `https://localhost:3001/api`.
+- Do NOT prefix paths with `/api` in calls. Use `/auth/register` (not `/api/auth/register`).
+- Requests must set `Content-Type: application/json`. The shared API client already enforces this.
+
+Example:
+- Base: `REACT_APP_API_BASE_URL=https://localhost:3001/api`
+- Call: `api.post('/auth/register', {...})` -> final URL: `https://localhost:3001/api/auth/register`
+
+Troubleshooting:
+- If you see "Cannot POST /api/auth/register" HTML, the request likely went to `/api/api/auth/register`. Remove the extra `/api` in the path or fix the env var.
+
 To regenerate OpenAPI schema file for interfaces/openapi.json (optional):
 - python manage.py generate_openAPI
 
