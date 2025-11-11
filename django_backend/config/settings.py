@@ -64,6 +64,9 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
+# Ensure URLs without trailing slash are redirected to trailing slash versions where applicable
+APPEND_SLASH = True
+
 ROOT_URLCONF = "config.urls"
 
 TEMPLATES = [
